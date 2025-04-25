@@ -14,7 +14,7 @@ func logError(err error) {
 
 func main() {
 	baseDIR := "./downloads"
-	video := tiktok.Video{URL: "https://www.tiktok.com/@berywambeatbox/video/6897238157025086721", BaseDIR: baseDIR}
+	video := tiktok.Video{URL: "https://vt.tiktok.com/ZS6bY2C28/", BaseDIR: baseDIR, Proxy: "http://192.168.1.5:10808"}
 	err := video.FetchInfo()
 	if err == nil {
 		_, err = video.Download()
@@ -35,27 +35,27 @@ func main() {
 
 	fmt.Println("------------------------------------------------------")
 
-	profile := tiktok.Profile{URL: "https://www.tiktok.com/@berywambeatbox", BaseDIR: baseDIR}
-	err = profile.FetchInfo()
-	if err == nil {
-		_, err = profile.DownloadPhoto("large")
-		if err == nil {
-			fmt.Println("Profile Image Downloaded Successfully!!!")
-		} else {
-			logError(err)
-		}
-	} else {
-		logError(err)
-	}
-	if ppInfo, err := profile.GetPPInfo(); err == nil {
-		fmt.Println("Profile Info:", ppInfo)
-	} else {
-		logError(err)
-	}
+	// profile := tiktok.Profile{URL: "https://www.tiktok.com/@berywambeatbox", BaseDIR: baseDIR}
+	// err = profile.FetchInfo()
+	// if err == nil {
+	// 	_, err = profile.DownloadPhoto("large")
+	// 	if err == nil {
+	// 		fmt.Println("Profile Image Downloaded Successfully!!!")
+	// 	} else {
+	// 		logError(err)
+	// 	}
+	// } else {
+	// 	logError(err)
+	// }
+	// if ppInfo, err := profile.GetPPInfo(); err == nil {
+	// 	fmt.Println("Profile Info:", ppInfo)
+	// } else {
+	// 	logError(err)
+	// }
 
-	if pInfo, err := profile.GetProfileInfo(); err == nil {
-		fmt.Println("Profile Info:", pInfo)
-	} else {
-		logError(err)
-	}
+	// if pInfo, err := profile.GetProfileInfo(); err == nil {
+	// 	fmt.Println("Profile Info:", pInfo)
+	// } else {
+	// 	logError(err)
+	// }
 }

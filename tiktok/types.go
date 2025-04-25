@@ -114,6 +114,76 @@ type SEO struct {
 	PageType   int             `json:"pageType"`
 }
 
+type Data struct {
+	SEO struct {
+		ABTest struct {
+			Canonical string `json:"canonical"`
+			PageID    string `json:"pageId"`
+			VidList   []interface{}  `json:"vidList"`
+			Params    struct {
+				AddInfoCardSEO struct {
+					Vid string `json:"vid"`
+				} `json:"add_info_card_seo"`
+				AddTranscriptSEO struct {
+					Vid string `json:"vid"`
+				} `json:"add_transcript_seo"`
+				BotCostOptimize struct {
+					SimplifyLink      bool `json:"simplify_link"`
+					SimplifyVideoDesc bool `json:"simplify_video_desc"`
+				} `json:"bot_cost_optimize"`
+				SEOGenericExposureCapacity struct {
+					Count int    `json:"count"`
+					Vid   string `json:"vid"`
+				} `json:"seo_generic_exposure_capacity"`
+				UpdateCommentsNumber struct {
+					Vid string `json:"vid"`
+				} `json:"update_comments_number"`
+			} `json:"parameters"`
+		} `json:"seo.abtest"`
+	} `json:"seo"`
+
+	WebApp struct {
+		VideoDetail struct {
+			ItemInfo struct {
+				ItemStruct struct {
+					ID           string `json:"id"`
+					Desc         string `json:"desc"`
+					CreateTime   string `json:"createTime"`
+					ScheduleTime int    `json:"scheduleTime"`
+					Video        struct {
+						ID             string   `json:"id"`
+						Height         int      `json:"height"`
+						Width          int      `json:"width"`
+						Duration       int      `json:"duration"`
+						Ratio          string   `json:"ratio"`
+						Cover          string   `json:"cover"`
+						OriginCover    string   `json:"originCover"`
+						DynamicCover   string   `json:"dynamicCover"`
+						PlayAddr       string   `json:"playAddr"`
+						DownloadAddr   string   `json:"downloadAddr"`
+						ShareCover     []string `json:"shareCover"`
+						Bitrate        int      `json:"bitrate"`
+						EncodedType    string   `json:"encodedType"`
+						Format         string   `json:"format"`
+						VideoQuality   string   `json:"videoQuality"`
+						CodecType      string   `json:"codecType"`
+						Definition     string   `json:"definition"`
+						SubtitleInfos  []struct {
+							UrlExpire        string `json:"UrlExpire"`
+							Size             string `json:"Size"`
+							LanguageID       string `json:"LanguageID"`
+							LanguageCodeName string `json:"LanguageCodeName"`
+							Url              string `json:"Url"`
+							Format           string `json:"Format"`
+							Version          string `json:"Version"`
+							Source           string `json:"Source"`
+						} `json:"subtitleInfos"`
+					} `json:"video"`
+				} `json:"itemStruct"`
+			} `json:"itemInfo"`
+		} `json:"webapp.video-detail"`
+	} `json:"webapp"`
+}
 type VideoData struct {
 	Props struct {
 		ProfileData `json:"pageProps"`

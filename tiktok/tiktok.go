@@ -19,6 +19,8 @@ import (
 var headers map[string]string
 var cookies []*http.Cookie
 
+var redirectAttemptedError = errors.New("redirect")
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	headers = map[string]string{
@@ -50,46 +52,79 @@ func (video *Video) setProxy() {
 	}
 }
 
-func (video *Video) setClient(jar *cookiejar.Jar) {
-	video.httpClient = &http.Client{
-		Jar: jar,
-	}
-	if video.Proxy != "" {
-		if proxyURL, err := url.Parse(video.Proxy); err == nil {
-			transport := &http.Transport{Proxy: http.ProxyURL(proxyURL)}
-			video.httpClient = &http.Client{
-				Jar:       jar,
-				Transport: transport,
+func (video *Video) getActuallURL() error {
+	if strings.Contains(video.URL, "vt.tiktok.com") {
+		c := video.createClient(false)
+		resp, err := c.Get(video.URL)
+		if err != nil {
+			if urlError, ok := err.(*url.Error); ok && urlError.Err == redirectAttemptedError {
+				video.URL = resp.Header.Get("Location")
+				err = nil
 			}
-		} else {
-			fmt.Println(err)
-			fmt.Println("Not Using Proxy")
+			return err
 		}
 	}
+	return nil
 }
 
+func (video *Video) createClient(redirect bool) *http.Client {
+	c := &http.Client{}
+	if video.Proxy != "" {
+		if proxyURL, err := url.Parse(video.Proxy); err == nil {
+			c.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+		}
+	}
+	if !redirect {
+		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return redirectAttemptedError
+		}
+	}
+	return c
+}
+
+func (video *Video) setClient(jar *cookiejar.Jar) {
+	c := video.createClient(true)
+	c.Jar = jar
+	video.httpClient = c
+}
+func (profile *Profile) getActuallURL() error {
+	if strings.Contains(profile.URL, "vt.tiktok.com") {
+		c := profile.createClient(false)
+		resp, err := c.Head(profile.URL)
+		if err != nil {
+			if urlError, ok := err.(*url.Error); ok && urlError.Err == redirectAttemptedError {
+				profile.URL = resp.Header.Get("Location")
+				err = nil
+			}
+			return err
+		}
+	}
+	return nil
+}
 func (profile *Profile) setProxy() {
 	if !(strings.Contains(profile.Proxy, "http://") || strings.Contains(profile.Proxy, "https://")) {
 		profile.Proxy = "http://" + string(profile.Proxy)
 	}
 }
-
-func (profile *Profile) setClient(jar *cookiejar.Jar) {
-	profile.httpClient = &http.Client{
-		Jar: jar,
-	}
+func (profile *Profile) createClient(redirect bool) *http.Client {
+	c := &http.Client{}
 	if profile.Proxy != "" {
 		if proxyURL, err := url.Parse(profile.Proxy); err == nil {
-			transport := &http.Transport{Proxy: http.ProxyURL(proxyURL)}
-			profile.httpClient = &http.Client{
-				Jar:       jar,
-				Transport: transport,
-			}
-		} else {
-			fmt.Println(err)
-			fmt.Println("Not Using Proxy")
+			c.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
 		}
 	}
+	if redirect {
+		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return redirectAttemptedError
+		}
+	}
+	return c
+}
+
+func (profile *Profile) setClient(jar *cookiejar.Jar) {
+	c := profile.createClient(true)
+	c.Jar = jar
+	profile.httpClient = c
 }
 
 // Download - Download Tiktok video
@@ -102,7 +137,7 @@ func (video *Video) Download() (string, error) {
 	case VideoDataV2:
 		URL = video.data.(VideoDataV2).ItemModule.Item.Video.PlayAddr
 	default:
-		return "", errors.New("Invalid Tiktok Video Data")
+		return "", errors.New("invalid Tiktok Video Data")
 	}
 	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
@@ -129,10 +164,12 @@ func (video *Video) Download() (string, error) {
 // FetchInfo - Get Tiktok video Information.
 func (video *Video) FetchInfo() error {
 	jar, _ := cookiejar.New(nil)
-	videoURL := video.URL
 	if video.Proxy != "" {
 		video.setProxy()
 	}
+	_ = video.getActuallURL()
+	videoURL := video.URL
+	fmt.Println(videoURL)
 	regex := regexp.MustCompile(`(?m)tiktok\.com\/@([\w.-]+)\/video\/(\d+)/?`)
 	regexResult := regex.FindStringSubmatch(videoURL)
 	username, videoId := regexResult[1], regexResult[2]
@@ -157,12 +194,16 @@ func (video *Video) FetchInfo() error {
 	if err != nil {
 		return err
 	}
+	// fmt.Println(resp.ContentLength)
+	// fmt.Println(video.filePath)
+	// fmt.Println(resp.Status)
+	// fmt.Println(doc.Html())
 	doc.Find("#__NEXT_DATA__").Each(func(i int, s *goquery.Selection) {
 		err = json.Unmarshal([]byte(s.Text()), &videoData)
 		video.data = videoData
 	})
 	if _, ok := video.data.(VideoData); !ok {
-		doc.Find("#sigi-persisted-data").Each(func(i int, s *goquery.Selection) {
+		doc.Find("#__UNIVERSAL_DATA_FOR_REHYDRATION__").Each(func(i int, s *goquery.Selection) {
 			data := strings.Replace(s.Text(), "window['SIGI_STATE']=", "", -1)
 			data = strings.Replace(data, fmt.Sprintf("\"%s\":", videoId), "\"item\":", -1)
 			data = strings.Replace(data, fmt.Sprintf("\"%s\":", username), "\"user\":", -1)
@@ -239,10 +280,11 @@ func (video *Video) GetInfo() (string, error) {
 // FetchInfo - Get Tiktok Profile information.
 func (profile *Profile) FetchInfo() error {
 	jar, _ := cookiejar.New(nil)
-	profileURL := profile.URL
 	if profile.Proxy != "" {
 		profile.setProxy()
 	}
+	_ = profile.getActuallURL()
+	profileURL := profile.URL
 	regex := regexp.MustCompile(`(?m)tiktok\.com\/@([\w.-]+)\/?`)
 	regexResult := regex.FindStringSubmatch(profileURL)
 	username := regexResult[1]
@@ -278,7 +320,7 @@ func (profile *Profile) FetchInfo() error {
 			profile.data = profileDataV2
 		})
 		if _, ok := profile.data.(ProfileDataV2); !ok {
-			return errors.New("Failed to fetch profile information")
+			return errors.New("failed to fetch profile information")
 		}
 	}
 	return err
